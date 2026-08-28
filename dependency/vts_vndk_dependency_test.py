@@ -266,6 +266,17 @@ class VtsVndkDependencyTest(unittest.TestCase):
                                        runpaths, custom_link_paths))
         return objs
 
+    @staticmethod
+    def _GetRealLinkPaths(link_paths, permitted_paths):
+        """Resolve the link paths that can be symbolic links."""
+        real_link_paths = []
+        for link_path in link_paths:
+            real_link_path = os.path.realpath(link_path)
+            if any(real_link_path.startswith(permitted_path + os.path.sep)
+                   for permitted_path in permitted_paths):
+                real_link_paths.append(real_link_path)
+        return real_link_paths
+
     def _FindLibsInLinkPaths(self, bitness, link_paths, objs):
         """Finds libraries in link paths.
 
@@ -352,6 +363,10 @@ class VtsVndkDependencyTest(unittest.TestCase):
 
         vendor_link_paths = [vndk_utils.FormatVndkPath(x, bitness) for
                              x in self._VENDOR_LINK_PATHS]
+        # vendor_link_paths can be symbolic links. They are the keys to
+        # search vendor_namespace which maps real paths to ElfObjects.
+        vendor_link_paths = self._GetRealLinkPaths(
+            vendor_link_paths, self._VENDOR_PERMITTED_PATHS)
         vendor_namespace = self._FindLibsInLinkPaths(
             bitness, self._VENDOR_PERMITTED_PATHS, objs)
         # Exclude VNDK and VNDK-SP extensions from vendor libraries.
@@ -364,6 +379,8 @@ class VtsVndkDependencyTest(unittest.TestCase):
 
         sp_hal_link_paths = [vndk_utils.FormatVndkPath(x, bitness) for
                              x in self._SP_HAL_LINK_PATHS]
+        sp_hal_link_paths = self._GetRealLinkPaths(
+            sp_hal_link_paths, self._VENDOR_PERMITTED_PATHS)
         sp_hal_namespace = self._FindLibsInLinkPaths(
             bitness, self._VENDOR_PERMITTED_PATHS, objs)
 
